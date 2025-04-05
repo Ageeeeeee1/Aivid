@@ -1,0 +1,51 @@
+import tensorflow as tf
+from tensorflow.keras import layers
+
+def build_generator(latent_dim):
+    """Builds the generator model."""
+    model = tf.keras.Sequential()
+
+    # Foundation for 64x64 image: 4x4 feature map with many channels
+    model.add(layers.Dense(4*4*256, use_bias=False, input_shape=(latent_dim,)))
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+    model.add(layers.Reshape((4, 4, 256)))
+    assert model.output_shape == (None, 4, 4, 256) # Note: None is the batch size
+
+    # Upsample to 8x8
+    model.add(layers.Conv2DTranspose(128, (5, 5), strides=(2, 2), padding='same', use_bias=False))
+    assert model.output_shape == (None, 8, 8, 128)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    # Upsample to 16x16
+    model.add(layers.Conv2DTranspose(64, (5, 5), strides=(2, 2), padding='same', use_bias=False))
+    assert model.output_shape == (None, 16, 16, 64)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    # Upsample to 32x32
+    model.add(layers.Conv2DTranspose(32, (5, 5), strides=(2, 2), padding='same', use_bias=False))
+    assert model.output_shape == (None, 32, 32, 32)
+    model.add(layers.BatchNormalization())
+    model.add(layers.LeakyReLU())
+
+    # Output layer: Upsample to 64x64 with 3 color channels (RGB) and tanh activation
+    model.add(layers.Conv2DTranspose(3, (5, 5), strides=(2, 2), padding='same', use_bias=False, activation='tanh'))
+    assert model.output_shape == (None, 64, 64, 3)
+
+    return model
+
+# --- Define the size of the noise vector (latent dimension) ---
+latent_dim = 100
+generator = build_generator(latent_dim)
+
+# --- Example: Generate a random image ---
+noise = tf.random.normal([1, latent_dim])
+generated_image = generator(noise)
+
+plt.imshow((generated_image[0] * 0.5 + 0.5).numpy()) # Rescale to [0, 1] for display
+plt.axis('off')
+plt.show()
+
+generator.summary()
